@@ -29,8 +29,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/nestja:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/nestja:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/nest-demo:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/nest-demo:$IMAGE_TAG
 
       - name: Deploy to EC2
         env:
@@ -44,8 +44,8 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << EOF
             aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
-            docker pull $ECR_REGISTRY/nestja:latest
-            docker stop nestja || true
-            docker rm nestja || true
-            docker run -d --name nestja -p 3000:3000 $ECR_REGISTRY/nestja:latest
+            docker pull $ECR_REGISTRY/nest-demo:latest
+            docker stop nest-demo || true
+            docker rm nest-demo || true
+            docker run -d --name nest-demo -p 3000:3000 $ECR_REGISTRY/nest-demo:latest
           EOF
