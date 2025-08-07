@@ -27,7 +27,7 @@ jobs:
 
       - name: Wait and Test Mongo
         run: |
-          sleep 10
+          sleep 15
           docker ps
           docker exec mongodb mongosh -u myuser -p mypassword --authenticationDatabase mydatabase --eval "db.stats()"
 
