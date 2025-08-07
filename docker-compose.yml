@@ -4,9 +4,14 @@ services:
   mongodb:
     image: mongo:6
     container_name: mongodb
-    restart: always
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: myuser
       MONGO_INITDB_ROOT_PASSWORD: mypassword
+      MONGO_INITDB_DATABASE: mydatabase
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
