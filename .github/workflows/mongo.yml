@@ -1,31 +1,34 @@
-name: Deploy MongoDB Container
+name: Deploy MongoDB to Remote Server
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy-mongo:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          echo -o StrictHostKeyChecking=no > ~/.ssh/config
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
-      - name: Deploy MongoDB to Remote Server
-        run: |
-          ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
-            docker rm -f mongodb || true
-            docker run -d \
-              --name mongodb \
-              -p 27017:27017 \
-              -e MONGO_INITDB_ROOT_USERNAME=myuser \
-              -e MONGO_INITDB_ROOT_PASSWORD=mypassword \
-              -e MONGO_INITDB_DATABASE=mydatabase \
-              mongo:6
-          EOF
+    - name: Deploy MongoDB Container to Server
+      run: |
+        ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
+          docker rm -f mongodb || true
+          docker run -d \
+            --name mongodb \
+            -p 27017:27017 \
+            -e MONGO_INITDB_ROOT_USERNAME=myuser \
+            -e MONGO_INITDB_ROOT_PASSWORD=mypassword \
+            -e MONGO_INITDB_DATABASE=mydatabase \
+            mongo:6
+        EOF
