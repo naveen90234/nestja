@@ -29,12 +29,13 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
 
     - name: Build, Tag, and Push Docker Image
+      id: build-image
       run: |
         IMAGE_TAG=$(date +%s)
         IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:$IMAGE_TAG
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
         docker build -t $IMAGE_URI .
         docker push $IMAGE_URI
-        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
     - name: SSH and Deploy on Server
       uses: appleboy/ssh-action@master
@@ -43,8 +44,9 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          IMAGE_URI=${{ env.IMAGE_URI }}
           aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-          docker pull ${{ env.IMAGE_URI }}
+          docker pull $IMAGE_URI
           docker stop nest-demo || true
           docker rm nest-demo || true
-          docker run -d --name nest-demo -p 3000:3000 ${{ env.IMAGE_URI }}
+          docker run -d --name nest-demo -p 3000:3000 $IMAGE_URI
