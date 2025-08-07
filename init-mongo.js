@@ -1,5 +1,7 @@
+// mongo-init.js
+db = db.getSiblingDB("mydatabase");
 db.createUser({
-  user: "myuser",
-  pwd: "mypassword",
-  roles: [{ role: "readWrite", db: "mydatabase" }]
+    user: "myuser",
+    pwd: "mypassword",
+    roles: [{ role: "readWrite", db: "mydatabase" }]
 });
