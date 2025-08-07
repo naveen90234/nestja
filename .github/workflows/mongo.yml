@@ -1,26 +1,31 @@
-name: Mongo Setup
+name: Deploy MongoDB on Ubuntu Server
 
 on: [push]
 
 jobs:
-  mongo-job:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Docker Compose
+      - name: Setup SSH
         run: |
-          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose version
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-      - name: Start MongoDB (no .env used)
-        run: docker-compose up -d
-
-      - name: Wait and Test Mongo
+      - name: Copy Docker Compose to server
         run: |
-          sleep 15
-          docker ps
-          docker exec mongodb mongosh -u myuser -p mypassword --authenticationDatabase admin --eval "db.stats()"
+          ssh ${{ secrets.USER }}@${{ secrets.HOST }} "mkdir -p /home/ubuntu/mongo"
+          scp docker-compose.yml ${{ secrets.USER }}@${{ secrets.HOST }}:/home/ubuntu/mongo/
+
+      - name: Run Docker Compose on server
+        run: |
+          ssh ${{ secrets.USER }}@${{ secrets.HOST }} "
+            cd /home/ubuntu/mongo &&
+            docker-compose down || true &&
+            docker-compose up -d
+          "
