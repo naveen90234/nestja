@@ -3,33 +3,30 @@ name: Deploy MongoDB to Server
 on:
   push:
     branches:
-      - main
+      - main  # or any branch you want
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy MongoDB Container
-      run: |
-        ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
-          docker rm -f mongodb || true
-
-          docker run -d \
-            --name mongodb \
-            -p 27017:27017 \
-            -e MONGO_INITDB_ROOT_USERNAME=myuser \
-            -e MONGO_INITDB_ROOT_PASSWORD=mypassword \
-            -e MONGO_INITDB_DATABASE=mydatabase \
-            mongo:6
-        EOF
+      - name: Deploy MongoDB container
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
+            docker run -d \
+              --name mongodb \
+              -p 27017:27017 \
+              -e MONGO_INITDB_ROOT_USERNAME=admin \
+              -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+              mongo
+EOF
