@@ -1,0 +1,31 @@
+name: Mongo Setup
+
+on: [push]
+
+jobs:
+  mongo-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          echo "MONGO_USER=myuser" >> .env
+          echo "MONGO_PASS=mypassword" >> .env
+          echo "MONGO_DB=mydatabase" >> .env
+
+      - name: Start MongoDB
+        run: docker-compose up -d
+
+      - name: Wait and Test Mongo
+        run: |
+          sleep 10
+          docker exec mongodb mongosh -u myuser -p mypassword --authenticationDatabase mydatabase --eval "db.stats()"
+
+      - name: Upload .env file
+        uses: actions/upload-artifact@v4
+        with:
+          name: mongodb-env
+          path: .env
