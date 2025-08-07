@@ -1,9 +1,9 @@
-name: Deploy MongoDB on Ubuntu Server
+name: Deploy MongoDB Container
 
 on: [push]
 
 jobs:
-  deploy:
+  deploy-mongo:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,17 +15,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          echo -o StrictHostKeyChecking=no > ~/.ssh/config
 
-      - name: Copy Docker Compose to server
+      - name: Deploy MongoDB to Remote Server
         run: |
-          ssh ${{ secrets.USER }}@${{ secrets.HOST }} "mkdir -p /home/ubuntu/mongo"
-          scp docker-compose.yml ${{ secrets.USER }}@${{ secrets.HOST }}:/home/ubuntu/mongo/
-
-      - name: Run Docker Compose on server
-        run: |
-          ssh ${{ secrets.USER }}@${{ secrets.HOST }} "
-            cd /home/ubuntu/mongo &&
-            docker-compose down || true &&
-            docker-compose up -d
-          "
+          ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
+            docker rm -f mongodb || true
+            docker run -d \
+              --name mongodb \
+              -p 27017:27017 \
+              -e MONGO_INITDB_ROOT_USERNAME=myuser \
+              -e MONGO_INITDB_ROOT_PASSWORD=mypassword \
+              -e MONGO_INITDB_DATABASE=mydatabase \
+              mongo:6
+          EOF
