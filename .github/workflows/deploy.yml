@@ -1,4 +1,4 @@
-name: Deploy NestJS
+name: Deploy to ECR and Server
 
 on:
   push:
@@ -11,18 +11,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 🔍 Add this step here
-      - name: Debug Secrets Presence
-        run: |
-          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            echo "❌ AWS_ACCESS_KEY_ID is missing"
-          else
-            echo "✅ AWS_ACCESS_KEY_ID is present"
-          fi
-
-      # 👇 Your AWS credentials step
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -30,4 +20,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      # ... your other deployment steps
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/nestja:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/nestja:$IMAGE_TAG
+
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << EOF
+            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+            docker pull $ECR_REGISTRY/nestja:latest
+            docker stop nestja || true
+            docker rm nestja || true
+            docker run -d --name nestja -p 3000:3000 $ECR_REGISTRY/nestja:latest
+          EOF
