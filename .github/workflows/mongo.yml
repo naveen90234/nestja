@@ -10,18 +10,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose version
+
       - name: Create .env file
         run: |
           echo "MONGO_USER=myuser" >> .env
           echo "MONGO_PASS=mypassword" >> .env
           echo "MONGO_DB=mydatabase" >> .env
 
-      - name: Start MongoDB
+      - name: Start MongoDB with Docker Compose
         run: docker-compose up -d
 
       - name: Wait and Test Mongo
         run: |
           sleep 10
+          docker ps
           docker exec mongodb mongosh -u myuser -p mypassword --authenticationDatabase mydatabase --eval "db.stats()"
 
       - name: Upload .env file
