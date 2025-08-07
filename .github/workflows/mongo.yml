@@ -1,4 +1,4 @@
-name: Deploy MongoDB to Remote Server
+name: Deploy MongoDB to Server
 
 on:
   push:
@@ -10,20 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Setup SSH
+    - name: Setup SSH key
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+        ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy MongoDB Container to Server
+    - name: Deploy MongoDB Container
       run: |
         ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
           docker rm -f mongodb || true
+
           docker run -d \
             --name mongodb \
             -p 27017:27017 \
