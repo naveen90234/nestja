@@ -21,12 +21,12 @@ jobs:
         ssh-keyscan -p 22 13.127.233.87 >> ~/.ssh/known_hosts
 
     - name: Deploy to EC2
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
       run: |
         scp docker-compose.yml init-mongo.js "${SERVER_USER}@${SERVER_HOST}:/home/ubuntu/"
         ssh "${SERVER_USER}@${SERVER_HOST}" << 'EOF'
-        sudo docker compose -f /home/ubuntu/docker-compose.yml down || true
-        sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
-      EOF
-
-
-          
+          sudo docker compose -f /home/ubuntu/docker-compose.yml down || true
+          sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
+EOF
