@@ -2,31 +2,37 @@ name: Deploy MongoDB
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # expose secrets safely as env (used inside run scripts)
+    env:
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p 22 13.127.233.87 >> ~/.ssh/known_hosts
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          # write private key preserving newlines
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # add server host key to known_hosts (use SERVER_HOST secret)
+          ssh-keyscan -p 22 "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-    - name: Deploy to EC2
-      env:
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        SERVER_HOST: ${{ secrets.SERVER_HOST }}
-      run: |
-        scp docker-compose.yml init-mongo.js "${SERVER_USER}@${SERVER_HOST}:/home/ubuntu/"
-        ssh "${SERVER_USER}@${SERVER_HOST}" << 'EOF'
-          sudo docker compose -f /home/ubuntu/docker-compose.yml down || true
-          sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
-EOF
+      - name: Copy files and Deploy to EC2
+        run: |
+          # copy compose + init script to remote
+          scp docker-compose.yml init-mongo.js "${SERVER_USER}@${SERVER_HOST}:/home/ubuntu/"
+          # run commands on remote; note the heredoc delimiter is at column 0 (no spaces)
+          ssh "${SERVER_USER}@${SERVER_HOST}" <<'REMOTE_EOF'
+sudo docker compose -f /home/ubuntu/docker-compose.yml down || true
+sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
+REMOTE_EOF
