@@ -29,6 +29,6 @@ jobs:
       - name: Deploy MongoDB on server
         run: |
           ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << 'EOF'
-          sudo docker compose -f /home/ubuntu/mongo-docker-compose.yml down || true
-          sudo docker compose -f /home/ubuntu/mongo-docker-compose.yml up -d
+          sudo docker compose -f /home/ubuntu/nestja/mongo-docker-compose.yml down || true
+          sudo docker compose -f /home/ubuntu/nestja/mongo-docker-compose.yml up -d
           EOF
