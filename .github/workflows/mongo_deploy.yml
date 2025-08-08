@@ -1,18 +1,29 @@
-- name: Deploy to EC2
-  env:
-    SERVER_HOST: ${{ secrets.SERVER_HOST }}
-    SERVER_USER: ${{ secrets.SERVER_USER }}
-    SERVER_PORT: ${{ secrets.SERVER_PORT }}
-    SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-  run: |
-    echo "$SERVER_SSH_KEY" > private_key.pem
-    chmod 600 private_key.pem
+name: Deploy Mongo Project
 
-    scp -i private_key.pem -P "$SERVER_PORT" docker-compose.yml init-mongo.js "$SERVER_USER@$SERVER_HOST:/home/ubuntu/"
+on:
+  push:
+    branches:
+      - main
 
-    ssh -i private_key.pem -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" "
-      docker compose -f /home/ubuntu/docker-compose.yml down || true &&
-      docker compose -f /home/ubuntu/docker-compose.yml up -d
-    "
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-    rm -f private_key.pem
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.SERVER_PORT }} -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          scp -P ${{ secrets.SERVER_PORT }} docker-compose.yml init-mongo.js "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST}}:/home/ubuntu/"
+          ssh -p ${{ secrets.SERVER_PORT }} "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            sudo docker compose -f /home/ubuntu/docker-compose.yml down || true &&
+            sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
+          "
