@@ -1,4 +1,4 @@
-name: Deploy Mongo to EC2
+name: Deploy NestJS Project to EC2
 
 on:
   push:
@@ -9,21 +9,32 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p $SERVER_PORT $SERVER_HOST >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2
+      - name: Sync project folder to server
         run: |
-          scp -P ${{ secrets.SERVER_PORT }} docker-compose.yml init-mongo.js "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST}}:/home/ubuntu/"
-          ssh -p ${{ secrets.SERVER_PORT }} "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-            sudo docker compose -f /home/ubuntu/docker-compose.yml down || true &&
-            sudo docker compose -f /home/ubuntu/docker-compose.yml up -d
+          rsync -avz -e "ssh -p $SERVER_PORT -i ~/.ssh/id_rsa" ./nestja/ $SERVER_USER@$SERVER_HOST:/home/ubuntu/nestja/
+
+      - name: Deploy with docker compose on server
+        run: |
+          ssh -p $SERVER_PORT -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "
+            cd /home/ubuntu/nestja &&
+            sudo docker compose down || true &&
+            sudo docker compose up -d
           "
+
