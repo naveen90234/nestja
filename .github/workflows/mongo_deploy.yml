@@ -26,10 +26,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p $SERVER_PORT "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Copy Compose and init script to server
-        run: |
-          scp -P $SERVER_PORT docker-compose.yml init-mongo.js $SERVER_USER@$SERVER_HOST:/home/ubuntu/
-
       - name: Deploy MongoDB on server
         run: |
           ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << 'EOF'
