@@ -1,0 +1,29 @@
+name: Deploy MongoDB
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to EC2
+      run: |
+        scp docker-compose.yml init-mongo.js ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+          docker compose -f /home/ubuntu/docker-compose.yml down || true &&
+          docker compose -f /home/ubuntu/docker-compose.yml up -d
+        "
