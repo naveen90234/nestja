@@ -1,12 +1,12 @@
-version: '3.8'
+version: "3.8"
 
 services:
   mongodb:
-    image: mongo:latest
+    image: mongo:6.0.6
     container_name: mongodb
     restart: always
     ports:
-      - "27017:27017"
+      - "27017:27017"  # expose host port 27017 to container 27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password123
